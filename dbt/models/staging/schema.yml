@@ -1,0 +1,56 @@
+version: 2
+
+models:
+  - name: stg_clinic_appointments
+    description: "Cleaned and typed staging layer. One-to-one with the source table — type casting, renaming, and quality flags only. All downstream models reference this."
+    columns:
+      - name: appointment_id
+        description: "Unique appointment identifier. Source: AppointmentID (cast from DOUBLE CSV artifact to BIGINT)."
+        data_type: bigint
+        tests: [unique, not_null]
+      - name: patient_id
+        description: "Patient identifier. Source: PatientId (cast from DOUBLE CSV artifact to BIGINT)."
+        data_type: bigint
+        tests: [not_null]
+      - name: clinic_name
+        description: "Name of the clinic where the appointment was scheduled."
+        data_type: varchar
+        tests: [not_null]
+      - name: gender
+        description: "Patient gender as recorded in the source."
+        data_type: varchar
+      - name: age
+        description: "Patient age as recorded in the source. Raw value retained even if invalid — see age_invalid."
+        data_type: integer
+      - name: age_invalid
+        description: "True if age < 0 (impossible value). Analysts should filter this out for age-based analysis."
+        data_type: boolean
+      - name: low_income
+        description: "Low-income flag. 1 = yes, 0 = no."
+        data_type: integer
+      - name: hypertension
+        description: "Hypertension flag. 1 = yes, 0 = no."
+        data_type: integer
+      - name: diabetes
+        description: "Diabetes flag. 1 = yes, 0 = no."
+        data_type: integer
+      - name: substance_use_disorder
+        description: "Substance use disorder flag. 1 = yes, 0 = no."
+        data_type: integer
+      - name: disability
+        description: "Disability severity. Ordinal integer 0–4, not a boolean. 0 = none; higher values indicate greater severity or count."
+        data_type: integer
+      - name: sms_sent
+        description: "Whether an SMS reminder was sent for this appointment."
+        data_type: boolean
+        tests: [not_null]
+      - name: scheduled_at
+        description: "Timestamp when the appointment was scheduled. Carries time-of-day; used to compute lead_time_days."
+        data_type: timestamptz
+      - name: appointment_at
+        description: "Timestamp of the appointment date. Always midnight UTC in this dataset."
+        data_type: timestamptz
+      - name: no_show
+        description: "Whether the patient did not attend the appointment."
+        data_type: boolean
+        tests: [not_null]

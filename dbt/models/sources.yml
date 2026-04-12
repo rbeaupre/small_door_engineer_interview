@@ -1,0 +1,9 @@
+version: 2
+
+sources:
+  - name: clinic
+    schema: main
+    description: "Raw scheduling system extract loaded by scripts/load_to_duckdb.py."
+    tables:
+      - name: clinic_appointments
+        description: "One row per appointment. Source of truth for all downstream models."

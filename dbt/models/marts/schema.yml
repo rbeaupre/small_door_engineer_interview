@@ -1,0 +1,132 @@
+version: 2
+
+models:
+  - name: appointments
+    description: "OBT mart — one row per appointment with all patient attributes, date dimensions, and derived metrics. Primary surface for BI tools and ad-hoc analysis."
+    columns:
+      - name: appointment_id
+        description: "Unique appointment identifier."
+        data_type: bigint
+        tests: [unique, not_null]
+      - name: no_show
+        description: "Whether the patient did not attend the appointment."
+        data_type: boolean
+      - name: sms_sent
+        description: "Whether an SMS reminder was sent for this appointment."
+        data_type: boolean
+      - name: lead_time_days
+        description: "Days between scheduling and appointment (appointment_at - scheduled_at). Can be negative — see lead_time_valid."
+        data_type: double
+      - name: lead_time_valid
+        description: "False if lead_time_days < 0 (timezone artifact). Filter to TRUE for lead-time analysis."
+        data_type: boolean
+      - name: scheduled_at
+        description: "Timestamp when the appointment was scheduled."
+        data_type: timestamptz
+      - name: appointment_at
+        description: "Timestamp of the appointment date. Always midnight UTC in this dataset."
+        data_type: timestamptz
+      - name: clinic_name
+        description: "Name of the clinic."
+        data_type: varchar
+      - name: year
+        description: "Calendar year of appointment_at."
+        data_type: integer
+      - name: quarter
+        description: "Quarter of appointment_at (1–4)."
+        data_type: integer
+      - name: month
+        description: "Month of appointment_at (1–12)."
+        data_type: integer
+      - name: month_name
+        description: "Full month name of appointment_at."
+        data_type: varchar
+      - name: week_of_year
+        description: "ISO week number of appointment_at."
+        data_type: integer
+      - name: day_of_week
+        description: "ISO day of week of appointment_at (1=Monday … 7=Sunday)."
+        data_type: integer
+      - name: day_name
+        description: "Full day name of appointment_at."
+        data_type: varchar
+      - name: patient_id
+        description: "Patient identifier."
+        data_type: bigint
+      - name: age
+        description: "Patient age as recorded at scheduling time. See age_invalid."
+        data_type: integer
+      - name: age_invalid
+        description: "True if age < 0. Filter out for age-based analysis."
+        data_type: boolean
+      - name: gender
+        description: "Patient gender as recorded at scheduling time."
+        data_type: varchar
+      - name: low_income
+        description: "Low-income flag (1/0) as recorded at scheduling time."
+        data_type: integer
+      - name: hypertension
+        description: "Hypertension flag (1/0) as recorded at scheduling time."
+        data_type: integer
+      - name: diabetes
+        description: "Diabetes flag (1/0) as recorded at scheduling time."
+        data_type: integer
+      - name: substance_use_disorder
+        description: "Substance use disorder flag (1/0) as recorded at scheduling time."
+        data_type: integer
+      - name: disability
+        description: "Disability severity 0–4 as recorded at scheduling time."
+        data_type: integer
+
+  - name: patient_summary
+    description: "Patient-level aggregate. One row per patient with latest known attributes and lifetime appointment statistics. Standalone — not joined to appointments."
+    columns:
+      - name: patient_id
+        description: "Patient identifier."
+        data_type: bigint
+        tests: [unique, not_null]
+      - name: gender
+        description: "Gender from the patient's most recent appointment."
+        data_type: varchar
+      - name: age
+        description: "Age from the patient's most recent appointment."
+        data_type: integer
+      - name: age_invalid
+        description: "True if age < 0 on the most recent appointment row."
+        data_type: boolean
+      - name: low_income
+        description: "Low-income flag from the patient's most recent appointment."
+        data_type: integer
+      - name: hypertension
+        description: "Hypertension flag from the patient's most recent appointment."
+        data_type: integer
+      - name: diabetes
+        description: "Diabetes flag from the patient's most recent appointment."
+        data_type: integer
+      - name: substance_use_disorder
+        description: "Substance use disorder flag from the patient's most recent appointment."
+        data_type: integer
+      - name: disability
+        description: "Disability severity (0–4) from the patient's most recent appointment."
+        data_type: integer
+      - name: total_appointments
+        description: "Total number of appointments across all time."
+        data_type: bigint
+      - name: no_show_count
+        description: "Number of appointments where the patient did not show."
+        data_type: bigint
+      - name: no_show_rate_pct
+        description: "No-show rate as a percentage (0–100), rounded to 1 decimal."
+        data_type: double
+      - name: sms_count
+        description: "Number of appointments for which an SMS reminder was sent."
+        data_type: bigint
+      - name: clinics_visited
+        description: "Number of distinct clinics the patient has been scheduled at."
+        data_type: bigint
+      - name: first_appointment_at
+        description: "Date of the patient's earliest appointment."
+        data_type: date
+      - name: last_appointment_at
+        description: "Date of the patient's most recent appointment."
+        data_type: date

@@ -1,0 +1,8 @@
+small_door:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: '../data/clinic.duckdb'
+      schema: main
+      threads: 1
