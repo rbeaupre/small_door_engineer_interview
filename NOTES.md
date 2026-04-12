@@ -177,7 +177,7 @@ This model aggregates over all appointments per patient, so incremental logic is
 ---
 
 ## Task Status
-- [x] Task 1 — EDA (scripts/eda.py, 10 charts in charts/)
+- [x] Task 1 — EDA (scripts/eda.py, 8 charts in charts)
 - [x] Task 2 — Model design + implementation (dbt project in dbt/)
 - [ ] Task 3 — Three hard calls
 - [ ] Task 4 — One analytical query

@@ -243,7 +243,7 @@ ax.set_xlabel("Total appointments")
 ax.set_ylabel("No-show rate")
 ax.set_title("Clinic volume vs. no-show rate")
 ax.yaxis.set_major_formatter(mticker.PercentFormatter(xmax=1))
-save(fig, "06_clinic_volume_vs_noshowrate.png")
+save(fig, "06a_clinic_volume_vs_noshowrate.png")
 
 # Chart: no-show rate distribution across clinics
 fig, ax = plt.subplots(figsize=(8, 4))
@@ -254,7 +254,7 @@ ax.set_ylabel("Number of clinics")
 ax.set_title("Distribution of no-show rates across clinics")
 ax.xaxis.set_major_formatter(mticker.PercentFormatter(xmax=1))
 ax.legend()
-save(fig, "07_noshowrate_distribution_by_clinic.png")
+save(fig, "06b_noshowrate_distribution_by_clinic.png")
 
 
 # ── 7. DISABILITY COLUMN ──────────────────────────────────────────────────────
@@ -317,7 +317,7 @@ ax.set_ylabel("No-show rate")
 ax.set_title("No-show rate by condition / flag")
 ax.yaxis.set_major_formatter(mticker.PercentFormatter(xmax=1))
 ax.legend()
-save(fig, "08_noshowrate_by_flag.png")
+save(fig, "07_noshowrate_by_flag.png")
 
 
 # ── 9. LEAD-TIME vs. NO-SHOW ──────────────────────────────────────────────────
@@ -350,7 +350,7 @@ ax.set_ylabel("No-show rate")
 ax.set_title("No-show rate by lead-time bucket")
 ax.yaxis.set_major_formatter(mticker.PercentFormatter(xmax=1))
 ax.tick_params(axis="x", rotation=20)
-save(fig, "09_noshowrate_by_leadtime.png")
+save(fig, "08_noshowrate_by_leadtime.png")
 
 
 # ── SUMMARY ───────────────────────────────────────────────────────────────────
