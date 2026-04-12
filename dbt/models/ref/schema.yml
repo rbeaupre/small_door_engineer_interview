@@ -1,0 +1,31 @@
+version: 2
+
+models:
+  - name: date_spine
+    description: "Date reference table covering 2015-01-01 to 2030-01-01 (configured in dbt_project.yml vars). Joined to appointments on date value directly."
+    columns:
+      - name: full_date
+        description: "Calendar date. Primary join key."
+        data_type: date
+        tests: [unique, not_null]
+      - name: year
+        description: "Calendar year."
+        data_type: integer
+      - name: quarter
+        description: "Quarter of the year (1–4)."
+        data_type: integer
+      - name: month
+        description: "Month of the year (1–12)."
+        data_type: integer
+      - name: month_name
+        description: "Full month name (e.g. 'January')."
+        data_type: varchar
+      - name: week_of_year
+        description: "ISO week number within the year."
+        data_type: integer
+      - name: day_of_week
+        description: "ISO day of week (1=Monday … 7=Sunday)."
+        data_type: integer
+      - name: day_name
+        description: "Full day name (e.g. 'Monday')."
+        data_type: varchar

@@ -7,25 +7,31 @@ The full prompt is in `case_study/Senior_Data_Engineer_Case_Study.md`.
 ## Getting started
 
 ```bash
-# Create and activate the virtual environment
 python -m venv venv
 source venv/bin/activate
-
-# Install dependencies
 pip install -r requirements.txt
 ```
 
-## Running the scripts
+## Running the pipeline
 
 ```bash
-# Task 1 — EDA: descriptive stats, data quality flags, and charts
-python scripts/eda.py
-
-# Load raw data into DuckDB
+# Step 1 — Load raw CSV into DuckDB
 python scripts/load_to_duckdb.py
 
-# Explore the database interactively
-harlequin data/clinic.duckdb
+# Step 2 — Build the dbt models
+cd dbt && dbt run --profiles-dir . --full-refresh
+
+# Step 3 — Run schema tests
+dbt test --profiles-dir .
+
+# Explore interactively
+harlequin ../data/clinic.duckdb
+```
+
+## EDA
+
+```bash
+python scripts/eda.py    # prints findings to terminal, saves charts to charts/
 ```
 
 ## Repo structure
@@ -33,8 +39,13 @@ harlequin data/clinic.duckdb
 | Path | Description |
 |------|-------------|
 | `case_study/` | Original prompt and source CSV |
-| `scripts/` | Python scripts, one per task step |
+| `scripts/` | Ingestion and EDA scripts |
+| `dbt/` | dbt project — staging, ref, and marts layers |
+| `dbt/models/staging/` | `stg_clinic_appointments` — type casts and quality flags |
+| `dbt/models/ref/` | `date_spine` — date reference table |
+| `dbt/models/marts/` | `appointments` (OBT), `patient_summary` |
 | `charts/` | EDA chart outputs |
-| `data/` | DuckDB database |
+| `data/` | DuckDB database (generated — not committed) |
 | `gamma/` | Slide-ready summaries for each task |
-| `NOTES.md` | Detailed findings and open decisions |
+| `task3_hard_calls.md` | Working draft for Task 3 hard decisions |
+| `NOTES.md` | Detailed findings, decisions, and open questions |
