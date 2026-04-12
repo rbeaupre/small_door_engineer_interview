@@ -6,11 +6,16 @@
 -- See NOTES.md for more commentary on this topic
 --
 -- Date decisions made here:
--- The date_spine model is joined on date value directly to provide added options for dashbaord comparisons.
+-- The date_spine model is joined on date value directly to provide added options for dashboard comparisons.
 -- The lead_time logic (epoch calculation + validity flag) is directly derived here.
+--
+-- is_utilized: proxy for clinic utilization at the appointment level (patient attended = slot was used).
+-- Note: without capacity data (total available slots per clinic), true utilization rate cannot be computed.
+-- Aggregate as SUM(is_utilized) / COUNT(*) per clinic to get the attended-appointment rate.
 SELECT
     s.appointment_id,
     s.no_show,
+    (NOT s.no_show)                             AS is_utilized,
     s.sms_sent,
     ROUND(
         EXTRACT(EPOCH FROM (s.appointment_at - s.scheduled_at)) / 86400.0,

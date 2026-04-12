@@ -18,13 +18,19 @@ Tasks are worked through sequentially (Tasks 1–5). For each task:
 ## Repo structure
 
 ```
-case_study/         Source materials (instructions + raw CSV)
-charts/             EDA chart outputs (PNG), named by section number
-data/               DuckDB database file(s)
-gamma/              Slide-ready markdown for Gamma, one file per task
-scripts/            Python scripts, one per major task step
-NOTES.md            Running findings log and open decisions
-requirements.txt    Pinned dependencies from the venv
+case_study/              Source materials (instructions + raw CSV)
+charts/                  EDA chart outputs (PNG), named by section number
+data/                    DuckDB database file(s)
+dbt/                     dbt project — staging, ref, and marts layers
+  models/
+    staging/             stg_clinic_appointments (view)
+    ref/                 date_spine (table)
+    marts/               appointments OBT, patient_summary (tables)
+gamma/                   Slide-ready markdown for Gamma, one file per task
+scripts/                 Python scripts (ingestion, EDA)
+task3_hard_calls.md      Working draft for Task 3 hard decisions
+NOTES.md                 Running findings log and open decisions
+requirements.txt         Pinned dependencies from the venv
 ```
 
 ## Environment

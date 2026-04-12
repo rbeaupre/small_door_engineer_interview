@@ -61,6 +61,10 @@ SMSReminder is a 0/1 flag stored as `sms_sent BOOLEAN` directly in the OBT. A 2-
 **Disability as integer (0–4)**
 Kept as the raw integer. The distinct values (0–4) suggest an ordinal severity count, not a boolean flag. Casting to boolean would collapse patients with multiple disabilities into the same category as those with one. No assumption is made about what the values mean — that requires domain input.
 
+**Clinic utilization definition**
+Without capacity data (total available slots per clinic), true utilization rate cannot be computed. `is_utilized` on the `appointments` OBT is the closest proxy available: whether a scheduled slot was actually attended (`NOT no_show`). Aggregate as `SUM(is_utilized) / COUNT(*)` per clinic to get an attended-appointment rate.
+A historical baseline approach was considered — using a clinic's own appointment volume over a reference period as a capacity proxy, or using the cross-clinic median as a benchmark. Both were rejected because they rely on assumptions that cannot be verified from this data alone: that all clinics operate at similar capacity, have comparable staffing levels, and that volume in the reference period was itself "normal." Given the extreme volume skew across clinics (CV ≈ 1.0), these assumptions are almost certainly wrong. The honest answer is that utilization requires a capacity feed from an operations or scheduling system, and the model is designed to join to one if it becomes available.
+
 **Clinic volume threshold**
 No minimum volume filter is encoded into the model. The decision of what constitutes a "statistically meaningful" clinic belongs in dashboard queries or documented conventions, not the DDL.
 

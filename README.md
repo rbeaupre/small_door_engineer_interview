@@ -40,8 +40,12 @@ python scripts/eda.py    # prints findings to terminal, saves charts to charts/
 |------|-------------|
 | `case_study/` | Original prompt and source CSV |
 | `scripts/` | Ingestion and EDA scripts |
-| `dbt/` | dbt project — staging, intermediate, and marts (OBT) |
+| `dbt/` | dbt project — staging, ref, and marts layers |
+| `dbt/models/staging/` | `stg_clinic_appointments` — type casts and quality flags |
+| `dbt/models/ref/` | `date_spine` — date reference table |
+| `dbt/models/marts/` | `appointments` (OBT), `patient_summary` |
 | `charts/` | EDA chart outputs |
 | `data/` | DuckDB database (generated — not committed) |
 | `gamma/` | Slide-ready summaries for each task |
+| `task3_hard_calls.md` | Working draft for Task 3 hard decisions |
 | `NOTES.md` | Detailed findings, decisions, and open questions |

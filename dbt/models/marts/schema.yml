@@ -11,6 +11,9 @@ models:
       - name: no_show
         description: "Whether the patient did not attend the appointment."
         data_type: boolean
+      - name: is_utilized
+        description: "Whether the appointment slot was attended (NOT no_show). Proxy for utilization in the absence of capacity data. Aggregate as SUM(is_utilized) / COUNT(*) per clinic for an attended-appointment rate."
+        data_type: boolean
       - name: sms_sent
         description: "Whether an SMS reminder was sent for this appointment."
         data_type: boolean
