@@ -18,19 +18,6 @@ Single-source dataset → purpose-built dbt stack on DuckDB
 
 ---
 
-## Key Modeling Decisions
-
-| Decision | Chose | Rejected | Would revisit if… |
-|---|---|---|---|
-| No `dim_patient_history` | Attributes carried directly from source row | SCD2 with BETWEEN join | Source team confirms attributes are backfilled at extraction time |
-| No `dim_clinic` | `clinic_name` direct from staging | 1-column lookup table | Operations system adds capacity/staffing data |
-| `date_spine` joined on date value | Direct equality join | Surrogate integer key | Data volumes grow significantly |
-| `sms_sent` as boolean | Flag on OBT | dim_sms | Multiple SMS messages per appointment with metadata |
-| `disability` as integer 0–4 | Raw ordinal value | Cast to boolean | Domain confirms it is a simple flag |
-| Clinic utilization proxy | `is_utilized = NOT no_show` | Capacity-based rate | Capacity feed from scheduling system available |
-
----
-
 ## Data Quality
 
 **Principle: flag and retain, never silently drop or impute.** Issues are surfaced as boolean flag columns — analysts choose whether to filter. Dropping rows hides problems; imputing values invents facts.
@@ -40,9 +27,22 @@ Single-source dataset → purpose-built dbt stack on DuckDB
 | Age = −1 (impossible) | 1 row | Keep raw, `age_invalid = true` | Appointment is valid; only the age field is wrong |
 | Age = 0 (ambiguous) | 3,539 rows | Keep, no flag | Could be infants or NULL sentinel — no data dictionary to confirm |
 | Age > 110 | 5 rows | Keep, no flag | Biologically possible; not worth flagging without domain guidance |
-| Negative lead time | 38,568 rows (~35%) | Keep raw, `lead_time_valid = false` | Timezone artifact; rows have valid no-show outcomes — dropping would bias counts |
+| Negative lead time | 38,568 rows (~35%) | Keep raw, `lead_time_valid = false` | Two distinct populations (29% vs 5% no-show rate) — analysts should be explicit about which they include |
 | Small clinics (n=1–2) | ~5 clinics | Keep all rows | Volume filtering belongs at the reporting layer, not the DDL |
-| Disability encoded 0–4 | — | Keep as integer | Ordinal severity count, not boolean; collapsing loses signal |
+| Disability encoded 0–4 | 2,241 rows with disability > 0 | Keep as integer | Ordinal severity count, not boolean; collapsing loses signal |
+
+---
+
+## Key Modeling Decisions
+
+| Decision | Chose | Rejected | Would revisit if… |
+|---|---|---|---|
+| No `dim_patient_history` | Attributes carried directly from source row | SCD2 with BETWEEN join | Source team confirms attributes are backfilled at extraction time (historical rows silently overwritten with current values) |
+| No `dim_clinic` | `clinic_name` direct from staging | 1-column lookup table | Operations system adds capacity/staffing data |
+| `date_spine` joined on date value | Direct equality join | Compute date attrs inline | Data volumes grow significantly — drop the join, derive year/month/DOW directly from `appointment_at` |
+| `sms_sent` as boolean | Flag on OBT | dim_sms | Multiple SMS messages per appointment with metadata |
+| `disability` as integer 0–4 | Raw ordinal value | Cast to boolean | Domain confirms it is a simple flag |
+| Clinic utilization proxy | `is_utilized = NOT no_show` | Capacity-based rate | Capacity feed from scheduling system available |
 
 ---
 
