@@ -6,10 +6,10 @@
 -- Including them would contaminate the same-day bucket.
 -- See NOTES.md Assumption 3 for full rationale.
 --
--- The SMS breakdown within each bucket surfaces the confounding: EDA shows SMS patients have higher overall no-show rates
--- But that is partly explained by longer lead times (higher-risk patients are preferentially reminded).
+-- The SMS breakdown within each bucket surfaces the confounding: EDA shows SMS appointments have higher overall no-show rates
+-- But that is partly explained by longer lead times (higher-risk appointments are preferentially reminded).
 -- Comparing sms_sent = true vs false within the same lead-time bucket isolates the SMS effect from the lead-time effect.
--- The overall trend is that sending SMS rmeidners does in fact lower no-show rates by 6-7% per lead-time bucket
+-- The overall trend is that sending SMS reminders does in fact lower no-show rates by 6-7% per lead-time bucket
 SELECT
     CASE
         WHEN lead_time_days = 0          THEN '1. Same day'
@@ -21,7 +21,7 @@ SELECT
     sms_sent,
     COUNT(*)                                                    AS total_appointments,
     SUM(CAST(no_show AS INTEGER))                               AS no_show_count,
-    ROUND(SUM(CAST(no_show AS INTEGER)) * 100.0 / COUNT(*), 1) AS no_show_rate_pct,
+    ROUND(SUM(CAST(no_show AS INTEGER)) * 100.0 / COUNT(*), 1)  AS no_show_rate_pct,
     ROUND(AVG(lead_time_days), 1)                               AS avg_lead_time_days
 FROM {{ ref('appointments') }}
 WHERE lead_time_valid = TRUE
