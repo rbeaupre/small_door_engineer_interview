@@ -23,3 +23,5 @@ models:
       +materialized: table
     marts:
       +materialized: table
+    analysis:
+      +materialized: table

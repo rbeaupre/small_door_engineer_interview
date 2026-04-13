@@ -21,14 +21,16 @@ Tasks are worked through sequentially (Tasks 1–5). For each task:
 case_study/              Source materials (instructions + raw CSV)
 charts/                  EDA chart outputs (PNG), named by section number
 data/                    DuckDB database file(s)
-dbt/                     dbt project — staging, ref, and marts layers
+dbt/                     dbt project — staging, ref, marts, and analysis layers
   models/
     staging/             stg_clinic_appointments (view)
     ref/                 date_spine (table)
     marts/               appointments OBT, patient_summary (tables)
-gamma/                   Slide-ready markdown for Gamma, one file per task
+    analysis/            no_show_by_lead_time (table)
+gamma/                   Slide-ready markdown for Gamma
 scripts/                 Python scripts (ingestion, EDA)
-task3_hard_calls.md      Working draft for Task 3 hard decisions
+TASK_3_HARD_CALLS.md     Task 3 hard design decisions
+TASK_5_PROD_DIAGRAM.md   Production pipeline sketch for Task 5
 NOTES.md                 Running findings log and open decisions
 requirements.txt         Pinned dependencies from the venv
 ```

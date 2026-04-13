@@ -22,7 +22,8 @@
 - Clinics with <50 appointments (Trindade Shores = 2, Industrial Park = 1) have statistically meaningless rates.
 
 ### No-show
-- Overall rate: **20.2%**
+- Overall rate: **20.2%** — but this is a blended figure across two distinct populations. `lead_time_valid = TRUE` rows have ~29% no-show; `lead_time_valid = FALSE` rows have ~5%. These populations behave differently and analysts should be explicit about which they are analysing.
+- **Caveat:** any no-show analysis should document whether it includes or excludes `lead_time_valid = FALSE` rows and why. Blending the two without acknowledgement produces a misleading rate.
 - Clinic range: 0% (n=1) to 100% (n=2) — small clinics dominate extremes.
 - After excluding sub-50 clinics, range is roughly 15%–29%.
 
@@ -82,14 +83,14 @@ Left as-is, no flag. Age = 0 is ambiguous — real infants or a NULL sentinel. W
 No flag. Biologically possible; not worth flagging without domain guidance.
 
 **Negative lead times (38,568 rows)**
-Keep the raw `lead_time_days` value, set `lead_time_valid = false`. Retained in no-show counts; excluded from lead-time analysis. Rationale: see Assumption 3.
+Keep the raw `lead_time_days` value, set `lead_time_valid = false`. The two groups represent distinct populations — `lead_time_valid = FALSE` rows have a ~5% no-show rate vs ~29% for valid rows. Analysts should be explicit about which population they are analysing and avoid blending the two without acknowledgement. Either group may be the right scope depending on the question. Rationale: see Assumption 3.
 
 **Small clinics**
 No rows removed. All 81 clinics are in the model. Volume-based filtering belongs at the reporting layer.
 
 ---
 
-### Dashboard Q&A (Looker Studio against `appointments`)
+### Dashboard Q&A (Cube + BI tool against `appointments`)
 
 **Q1 — Which clinics have the highest no-show rates, and is that stable over time?**
 Create a calculated metric: `SUM(no_show) / COUNT(appointment_id)` as `no_show_rate`. Build a bar chart ranked by `no_show_rate` with `clinic_name` as the dimension. For stability, add a time series chart with `year` + `quarter` on the x-axis, `no_show_rate` as the metric, and `clinic_name` as a breakdown series. Note: consider applying a minimum volume filter (e.g. `COUNT(appointment_id) >= 50`) as a report-level filter to suppress statistically meaningless rates from small clinics.
@@ -124,7 +125,9 @@ Use `patient_summary` (standalone model) or aggregate `appointments` directly. F
 The patient attributes on each row (age, gender, condition flags) are treated as reflecting the patient's state as recorded when the appointment was scheduled, not at time of visit or at time of data extraction. This is the basis for using the appointment row's own attributes directly rather than resolving them through a separate patient dimension. If this assumption is wrong — i.e., attributes are backfilled to current values at extraction time — then the OBT would silently contain incorrect historical values and a proper SCD2 approach would be required.
 
 **Assumption 3 — Negative lead times are a timezone artifact, not scheduling errors**
-The 38,568 rows where `scheduled_at > appointment_at` are treated as same-day bookings where the recorded timestamp crossed midnight UTC rather than genuine data entry errors. The evidence: the magnitude is small (max −6.6 days, median close to zero), `ScheduledDay` always carries a time component while `AppointmentDay` is always midnight UTC, and the volume (35% of records) is too large to be explained by random entry errors alone. If this assumption is wrong — i.e., some of these represent real scheduling anomalies — the effect is that a small number of potentially erroneous appointments are retained in no-show counts. The `lead_time_valid` flag ensures they are excluded from any lead-time analysis regardless.
+The 38,568 rows where `scheduled_at > appointment_at` are treated as same-day bookings where the recorded timestamp crossed midnight UTC rather than genuine data entry errors. The evidence: the magnitude is small (max −6.6 days, median close to zero), `ScheduledDay` always carries a time component while `AppointmentDay` is always midnight UTC, and the volume (35% of records) is too large to be explained by random entry errors alone.
+
+However, the `lead_time_valid = FALSE` group has a ~5% no-show rate vs ~29% for valid rows — a material difference that suggests these rows represent a genuinely distinct appointment type (possibly walk-ins or urgent slots), not just timezone-shifted same-day bookings. Analysts should treat them as a separate population and be explicit about which group they are including. Depending on the question, either group — or both separately — may be the right scope.
 
 ---
 
@@ -134,10 +137,11 @@ Implemented with dbt + dbt-duckdb. All transformations live in `dbt/models/`.
 
 ```
 dbt/models/
-  staging/  stg_clinic_appointments    ← types, casts, quality flags (view)
-  ref/      date_spine                 ← date reference table 2015–2030 (table)
-  marts/    appointments               ← OBT; primary BI surface (table)
-            patient_summary            ← patient-level aggregate; standalone (table)
+  staging/   stg_clinic_appointments    ← types, casts, quality flags (view)
+  ref/       date_spine                 ← date reference table 2015–2030 (table)
+  marts/     appointments               ← OBT; primary BI surface (table)
+             patient_summary            ← patient-level aggregate; standalone (table)
+  analysis/  no_show_by_lead_time       ← no-show rate by lead-time bucket × SMS (table)
 ```
 
 Run: `cd dbt && dbt run --profiles-dir . --full-refresh`
@@ -147,7 +151,7 @@ Test: `cd dbt && dbt test --profiles-dir .`
 
 Currently all models run as full rebuilds (`--full-refresh`). This is fine for the static case study dataset but does not scale as `clinic_appointments` grows.
 
-**Required source columns (Dagster must provide these):**
+**Required source columns (source system must expose these; Cloud Function preserves them on ingestion):**
 
 | Column | Type | Purpose |
 |---|---|---|
@@ -174,11 +178,24 @@ This model aggregates over all appointments per patient, so incremental logic is
 **`date_spine` and `stg_clinic_appointments`**
 `date_spine` is static reference data — full rebuild is always correct and fast. `stg_clinic_appointments` is a view, so it reflects the current source state on every query automatically.
 
+### Real-time Architecture (if near-real-time is required)
+
+The batch architecture above shifts substantially for real-time ingestion. The dbt model structure and marts stay the same — only the ingestion layer changes.
+
+**What changes:**
+- **Pub/Sub replaces Cloud Scheduler as the trigger**: the source system publishes an event to a Pub/Sub topic on every appointment create, update, or cancel. Cloud Scheduler no longer drives the pipeline.
+- **Dataflow replaces the Cloud Function**: Cloud Functions work for low-volume batch but lack backpressure handling and exactly-once semantics at scale. Dataflow (Apache Beam) subscribes to Pub/Sub, windows the stream, and writes to GCS (raw archive) and BigQuery (Storage Write API) in parallel.
+- **dbt runs on a short cadence**: triggered every 15–30 minutes via a Dagster sensor that fires when new rows appear in the raw BigQuery table. Incremental models become essential — `--full-refresh` on a 15-minute cycle is not viable.
+- **Dagster switches from schedule-based to sensor-based**: a sensor watches the raw table for activity and kicks off the asset graph, rather than running on a fixed clock.
+- **Cube cache TTL shortens**: Cube's query cache needs a much shorter TTL to serve data that's actually fresh.
+
+**What stays the same:** staging/ref/marts model structure, dbt tests, Cube semantic layer, `updated_at` watermark logic.
+
 ---
 
 ## Task Status
-- [x] Task 1 — EDA (scripts/eda.py, 10 charts in charts/)
+- [x] Task 1 — EDA (scripts/eda.py, 8 charts in charts/)
 - [x] Task 2 — Model design + implementation (dbt project in dbt/)
-- [ ] Task 3 — Three hard calls
-- [ ] Task 4 — One analytical query
-- [ ] Task 5 — Production sketch
+- [x] Task 3 — Three hard calls (TASK_3_HARD_CALLS.md)
+- [x] Task 4 — One analytical query (dbt/models/analysis/no_show_by_lead_time.sql)
+- [x] Task 5 — Production sketch (TASK_5_PROD_DIAGRAM.md)

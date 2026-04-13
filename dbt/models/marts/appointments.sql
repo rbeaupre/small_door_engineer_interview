@@ -15,7 +15,7 @@
 SELECT
     s.appointment_id,
     s.no_show,
-    (NOT s.no_show)                             AS is_utilized,
+    (NOT s.no_show)                         AS is_utilized,
     s.sms_sent,
     ROUND(
         EXTRACT(EPOCH FROM (s.appointment_at - s.scheduled_at)) / 86400.0,
