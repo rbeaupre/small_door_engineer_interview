@@ -47,7 +47,8 @@ python scripts/eda.py    # prints findings to terminal, saves charts to charts/
 | `dbt/models/analysis/` | `no_show_by_lead_time` — analytical query |
 | `charts/` | EDA chart outputs |
 | `data/` | DuckDB database (generated — not committed) |
-| `gamma/` | Slide-ready deck for panel presentation |
+| `gamma/` | Slide-ready markdown — source for the panel presentation deck |
+| `Senior-Data-Engineer-Case-Study-Preso.pdf` | Panel presentation (built from `gamma/deck_gamma.md`) |
 | `TASK_3_HARD_CALLS.md` | Task 3 — three hard design decisions |
 | `TASK_5_PROD_DIAGRAM.md` | Task 5 — production pipeline sketch |
 | `NOTES.md` | Detailed findings, decisions, and open questions |
