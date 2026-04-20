@@ -47,6 +47,7 @@ requirements.txt         Pinned dependencies from the venv
 - **Responses should be concise.** No trailing summaries of what was just done.
 - **Don't make silent decisions.** If data is excluded from an analysis, the script should print why and how many rows were affected.
 - **Don't clean beyond what's asked.** Data quality issues should be flagged and documented, not silently imputed or dropped. That belongs in a staged transformation layer, not a script.
+- **Intermediate layer: flag and retain. Mart layer: filter for polished simplicity.** Quality flags live in `int_clinic_appointments` so audit queries are always possible. Mart models filter bad rows out so stakeholders never encounter ambiguous or impossible values.
 - **Ask the slides target for Gamma files.** But keep them tight — one strong idea per slide, tables over prose where possible.
 - **Prefer editing existing files over creating new ones.** Only create a new file if it clearly belongs to a new concern.
 - When charts are added or renamed, keep numbering consistent with the section they belong to (e.g., `05a_`, `05b_` for two charts from section 5).

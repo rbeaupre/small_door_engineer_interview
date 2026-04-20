@@ -1,6 +1,9 @@
 -- Patient-level aggregate with one row per patient.
 -- Answers "What is the complete picture of a patient?" — latest known attributes combined with lifetime appointment statistics.
--- Intended as a secondary analytical surface operational reporting separate from the appointment grain.
+-- Intended as a secondary analytical surface for operational reporting, separate from the appointment grain.
+--
+-- Mart philosophy: flag and retain in the intermediate layer; filter for polished simplicity here.
+-- Data quality filtering is applied upstream in appointments — this model inherits clean rows only.
 
 -- Most recent appointment row per patient — used to source current attribute state.
 WITH latest_attrs AS (
@@ -8,7 +11,6 @@ WITH latest_attrs AS (
         patient_id,
         gender,
         age,
-        age_invalid,
         low_income,
         hypertension,
         diabetes,
@@ -38,7 +40,6 @@ SELECT
     s.patient_id,
     l.gender,
     l.age,
-    l.age_invalid,
     l.low_income,
     l.hypertension,
     l.diabetes,

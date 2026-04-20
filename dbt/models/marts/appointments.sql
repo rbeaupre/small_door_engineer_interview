@@ -1,30 +1,29 @@
--- OBT (One Big Table) mart: single table for dashboard use
--- Primary surface for all downstream queries which helps avoid multi-join fan-out at query time.
+-- OBT (One Big Table) mart: single table for dashboard use.
+-- Primary surface for all downstream queries — avoids multi-join fan-out at query time.
 --
--- Patient attributes (age, gender, condition flags) are carried directly from staging.
--- Each appointment row in the source already records patient state at scheduling time with no separate patient dimension.
--- See NOTES.md for more commentary on this topic
+-- Patient attributes (age, gender, condition flags) are carried directly from the intermediate layer.
+-- Each appointment row in the source already records patient state at scheduling time.
+-- See NOTES.md for more commentary on this topic.
 --
--- Date decisions made here:
--- The date_spine model is joined on date value directly to provide added options for dashboard comparisons.
--- The lead_time logic (epoch calculation + validity flag) is directly derived here.
+-- Date spine is joined on date value to provide calendar attributes for dashboard comparisons.
 --
 -- is_utilized: proxy for clinic utilization at the appointment level (patient attended = slot was used).
 -- Note: without capacity data (total available slots per clinic), true utilization rate cannot be computed.
 -- Aggregate as SUM(is_utilized) / COUNT(*) per clinic to get the attended-appointment rate.
+--
+-- Mart philosophy: flag and retain in the intermediate layer; filter for polished simplicity here.
+-- Rows with data quality issues are kept in int_clinic_appointments for audit purposes but excluded
+-- from this model so stakeholders never encounter ambiguous or impossible values.
 SELECT
-    s.appointment_id,
-    s.no_show,
-    (NOT s.no_show)                         AS is_utilized,
-    s.sms_sent,
-    ROUND(
-        EXTRACT(EPOCH FROM (s.appointment_at - s.scheduled_at)) / 86400.0,
-        2
-    )                                       AS lead_time_days,
-    (s.appointment_at >= s.scheduled_at)    AS lead_time_valid,
-    s.scheduled_at,
-    s.appointment_at,
-    s.clinic_name,
+    i.appointment_id,
+    i.no_show,
+    (NOT i.no_show)                         AS is_utilized,
+    i.sms_sent,
+    i.lead_time_days,
+    i.same_day_appointment,
+    i.scheduled_at,
+    i.appointment_at,
+    i.clinic_name,
     d.year,
     d.quarter,
     d.month,
@@ -32,14 +31,15 @@ SELECT
     d.week_of_year,
     d.day_of_week,
     d.day_name,
-    s.patient_id,
-    s.age,
-    s.age_invalid,
-    s.gender,
-    s.low_income,
-    s.hypertension,
-    s.diabetes,
-    s.substance_use_disorder,
-    s.disability
-FROM      {{ ref('stg_clinic_appointments') }}  s
-JOIN      {{ ref('date_spine') }}               d  ON  CAST(s.appointment_at AS DATE) = d.full_date
+    i.patient_id,
+    i.age,
+    i.gender,
+    i.low_income,
+    i.hypertension,
+    i.diabetes,
+    i.substance_use_disorder,
+    i.disability
+FROM      {{ ref('int_clinic_appointments') }}  i
+JOIN      {{ ref('date_spine') }}               d  ON  CAST(i.appointment_at AS DATE) = d.full_date
+WHERE     i.lead_time_genuinely_negative = FALSE  -- exclude 5 rows where appt date < schedule date
+  AND     i.age_invalid = FALSE                  -- exclude 1 row with age = -1

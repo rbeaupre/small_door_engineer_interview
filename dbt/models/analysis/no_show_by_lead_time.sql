@@ -1,9 +1,14 @@
 -- No-show rate segmented by lead-time bucket and SMS reminder status.
 --
 -- Lead time = days between scheduling and appointment date.
--- Rows where lead_time_valid = FALSE are excluded — these are timezone-artifact rows
--- where ScheduledDay (with time component) appears to fall after AppointmentDay (always midnight UTC).
--- Including them would contaminate the same-day bucket.
+-- Rows where lead_time_valid = FALSE are excluded. Deep-dive analysis shows these are same-day walk-in
+-- appointments where AppointmentDay is always stored as midnight UTC while ScheduledDay carries a time
+-- component — making same-day bookings appear negative. Key evidence: 38,563 of 38,568 invalid rows share
+-- the same calendar date across both columns; zero SMS reminders were sent to any of them; no-show rate
+-- is 4.7% vs ~20% for valid rows. These are a clinically distinct population (walk-ins), not bad data.
+-- Both populations are excluded explicitly: same_day_appointment removes the 38,563 walk-ins;
+-- lead_time_genuinely_negative removes the 5 rows where appointment date precedes schedule date.
+-- Both flags are retained on the OBT for full-count analyses — excluded only here.
 -- See NOTES.md Assumption 3 for full rationale.
 --
 -- The SMS breakdown within each bucket surfaces the confounding: EDA shows SMS appointments have higher overall no-show rates
@@ -24,6 +29,7 @@ SELECT
     ROUND(SUM(CAST(no_show AS INTEGER)) * 100.0 / COUNT(*), 1)  AS no_show_rate_pct,
     ROUND(AVG(lead_time_days), 1)                               AS avg_lead_time_days
 FROM {{ ref('appointments') }}
-WHERE lead_time_valid = TRUE
+WHERE same_day_appointment = FALSE
+  AND lead_time_genuinely_negative = FALSE
 GROUP BY 1, 2
 ORDER BY 1, 2

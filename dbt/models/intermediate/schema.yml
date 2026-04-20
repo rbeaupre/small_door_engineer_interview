@@ -1,16 +1,16 @@
 version: 2
 
 models:
-  - name: stg_clinic_appointments
-    description: "Staging layer. One-to-one with the source table — type casting and column renaming only. Data quality flags and derived columns live in int_clinic_appointments."
+  - name: int_clinic_appointments
+    description: "Intermediate layer. Refs staging and adds data quality fixes, flags, and derived columns. All mart and analysis models reference this — not staging directly."
     columns:
       - name: appointment_id
-        description: "Unique appointment identifier. Source: AppointmentID (cast to BIGINT)."
+        description: "Unique appointment identifier."
         data_type: bigint
         tests: [unique, not_null]
       - name: patient_id
-        description: "Patient identifier. Source: PatientId, retained as DOUBLE. Decimal-removal fix applied in int_clinic_appointments."
-        data_type: double
+        description: "Patient identifier. Fractional source values (5 rows) have their decimal stripped to recover the full-length integer (e.g. 93779.52927 → 9377952927)."
+        data_type: bigint
         tests: [not_null]
       - name: clinic_name
         description: "Name of the clinic where the appointment was scheduled."
@@ -20,8 +20,11 @@ models:
         description: "Patient gender as recorded in the source."
         data_type: varchar
       - name: age
-        description: "Patient age as recorded in the source. Raw value retained — age_invalid flag added in int_clinic_appointments."
+        description: "Patient age as recorded in the source. Raw value retained even if invalid — see age_invalid."
         data_type: integer
+      - name: age_invalid
+        description: "True if age < 0 (impossible value). Analysts should filter this out for age-based analysis."
+        data_type: boolean
       - name: low_income
         description: "Low-income flag. 1 = yes, 0 = no."
         data_type: integer
@@ -51,3 +54,12 @@ models:
         description: "Whether the patient did not attend the appointment."
         data_type: boolean
         tests: [not_null]
+      - name: lead_time_days
+        description: "Days between scheduling and appointment (appointment_at - scheduled_at). Negative for same-day walk-ins (midnight UTC artifact) and 5 genuinely negative rows — see same_day_appointment and lead_time_genuinely_negative."
+        data_type: double
+      - name: same_day_appointment
+        description: "True if appointment and schedule share the same calendar date. Identifies the walk-in/drop-in population (38,563 rows) whose negative timestamp lead time is a midnight UTC storage artifact, not bad data. No-show rate for this group is 4.7% vs ~20% overall."
+        data_type: boolean
+      - name: lead_time_genuinely_negative
+        description: "True if appointment date is strictly before schedule date (5 rows). Likely data entry errors. Rows are retained here for full-count audits but filtered out of the appointments mart."
+        data_type: boolean
