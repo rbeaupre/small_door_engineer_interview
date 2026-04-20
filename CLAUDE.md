@@ -21,11 +21,12 @@ Tasks are worked through sequentially (Tasks 1–5). For each task:
 case_study/              Source materials (instructions + raw CSV)
 charts/                  EDA chart outputs (PNG), named by section number
 data/                    DuckDB database file(s)
-dbt/                     dbt project — staging, ref, marts, and analysis layers
+dbt/                     dbt project — staging, intermediate, ref, marts, and analysis layers
   models/
     staging/             stg_clinic_appointments (view)
+    intermediate/        int_clinic_appointments (view)
     ref/                 date_spine (table)
-    marts/               appointments OBT, patient_summary (tables)
+    marts/               appointments OBT, patient_summary, clinic_summary (tables)
     analysis/            no_show_by_lead_time (table)
 gamma/                   Slide-ready markdown for Gamma
 scripts/                 Python scripts (ingestion, EDA)

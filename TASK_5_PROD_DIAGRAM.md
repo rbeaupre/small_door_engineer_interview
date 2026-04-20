@@ -41,11 +41,13 @@
 ┌─────────────────────────────────────────────────────────┐
 │   dbt on BigQuery                                       │
 │                                                         │
-│   staging/   stg_clinic_appointments  (view)            │
-│   ref/       date_spine               (table)           │
-│   marts/     appointments             (incremental)     │
-│              patient_summary          (table)           │
-│   analysis/  no_show_by_lead_time     (table)           │
+│   staging/       stg_clinic_appointments  (view)        │
+│   intermediate/  int_clinic_appointments  (view)        │
+│   ref/           date_spine               (table)       │
+│   marts/         appointments             (incremental) │
+│                  patient_summary          (table)       │
+│                  clinic_summary           (table)       │
+│   analysis/      no_show_by_lead_time     (table)       │
 └────────────┬────────────────────────────────────────────┘
              ▼
 ┌─────────────────────────┐

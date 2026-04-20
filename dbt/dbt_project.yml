@@ -19,6 +19,8 @@ models:
   small_door:
     staging:
       +materialized: view
+    intermediate:
+      +materialized: view
     ref:
       +materialized: table
     marts:

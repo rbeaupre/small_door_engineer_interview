@@ -8,8 +8,9 @@
 - 39.1% of patients have >1 appointment; one patient has 88. Patient is NOT an independent unit.
 
 ### Date / Lead-time
-- **38,568 rows (~35%)** have negative lead-time (ScheduledDay > AppointmentDay).
-  - Magnitude is small (max −6.6 days). Likely a timezone parsing artifact: ScheduledDay has a time component (e.g., 18:38 UTC) and AppointmentDay is midnight UTC, so same-day bookings recorded late in the day appear negative.
+- **38,568 rows (~35%)** have negative lead-time (ScheduledDay > AppointmentDay) — but this is two distinct populations:
+  - **38,563 rows**: same-calendar-day appointments where AppointmentDay is stored as midnight UTC and ScheduledDay carries a time component. Zero SMS reminders sent to any of them. 4.7% no-show rate. These are walk-in/drop-in appointments — retained in mart with `same_day_appointment = true`.
+  - **5 rows**: appointment date strictly precedes schedule date across calendar days. All are no-shows. No plausible clinical explanation — filtered from mart, retained in intermediate with `lead_time_genuinely_negative = true`.
 - Lead-time monotonically predicts no-show up to ~60 days (same-day ~14% → 31–60d ~34%).
 
 ### Age
@@ -22,8 +23,8 @@
 - Clinics with <50 appointments (Trindade Shores = 2, Industrial Park = 1) have statistically meaningless rates.
 
 ### No-show
-- Overall rate: **20.2%** — but this is a blended figure across two distinct populations. `lead_time_valid = TRUE` rows have ~29% no-show; `lead_time_valid = FALSE` rows have ~5%. These populations behave differently and analysts should be explicit about which they are analysing.
-- **Caveat:** any no-show analysis should document whether it includes or excludes `lead_time_valid = FALSE` rows and why. Blending the two without acknowledgement produces a misleading rate.
+- Overall rate: **20.2%** — but this is a blended figure across two distinct populations. Scheduled appointments have ~29% no-show; same-day walk-ins (`same_day_appointment = true`) have ~5%. These populations behave differently and analysts should be explicit about which they are analysing.
+- **Caveat:** any no-show analysis should document whether it includes or excludes same-day walk-ins and why. Blending the two without acknowledgement produces a misleading rate.
 - Clinic range: 0% (n=1) to 100% (n=2) — small clinics dominate extremes.
 - After excluding sub-50 clinics, range is roughly 15%–29%.
 
@@ -73,17 +74,19 @@ No minimum volume filter is encoded into the model. The decision of what constit
 
 ### Data Cleansing Decisions
 
+**Philosophy: flag and retain in intermediate (`int_clinic_appointments`); filter for polished simplicity in the mart (`appointments`).** Bad rows are always available for audit via the intermediate model.
+
 **Age = -1 (1 row)**
-Keep the raw value (-1), set `age_invalid = true`. Consistent with how negative lead times are handled — flag and retain rather than null or drop. Analysts filter on `age_invalid` to exclude from age-based analysis.
+Flagged as `age_invalid = true` in intermediate. Filtered out of the mart — the mart is the stakeholder surface and should not expose impossible values.
 
 **Age = 0 (3,539 rows)**
-Left as-is, no flag. Age = 0 is ambiguous — real infants or a NULL sentinel. Without a data dictionary confirming which, flagging it would be an unjustified assumption.
+Left as-is, no flag. Likely newborns — deep-dive shows Age = 0 + LowIncome patients have a *lower* no-show rate (13.5% vs ~20% overall), consistent with parents not skipping newborn appointments. Without a data dictionary, flagging would be an unjustified assumption.
 
 **Age > 110 (5 rows)**
 No flag. Biologically possible; not worth flagging without domain guidance.
 
 **Negative lead times (38,568 rows)**
-Keep the raw `lead_time_days` value, set `lead_time_valid = false`. The two groups represent distinct populations — `lead_time_valid = FALSE` rows have a ~5% no-show rate vs ~29% for valid rows. Analysts should be explicit about which population they are analysing and avoid blending the two without acknowledgement. Either group may be the right scope depending on the question. Rationale: see Assumption 3.
+Two populations — see Date / Lead-time section above. Walk-ins flagged and retained; 5 genuinely negative rows flagged in intermediate and filtered from mart. Rationale: see Assumption 3.
 
 **Small clinics**
 No rows removed. All 81 clinics are in the model. Volume-based filtering belongs at the reporting layer.
@@ -96,7 +99,7 @@ No rows removed. All 81 clinics are in the model. Volume-based filtering belongs
 Create a calculated metric: `SUM(no_show) / COUNT(appointment_id)` as `no_show_rate`. Build a bar chart ranked by `no_show_rate` with `clinic_name` as the dimension. For stability, add a time series chart with `year` + `quarter` on the x-axis, `no_show_rate` as the metric, and `clinic_name` as a breakdown series. Note: consider applying a minimum volume filter (e.g. `COUNT(appointment_id) >= 50`) as a report-level filter to suppress statistically meaningless rates from small clinics.
 
 **Q2 — Does the gap between scheduling and appointment date predict no-shows?**
-Filter to `lead_time_valid = TRUE` to exclude timezone-artifact rows. Create a calculated bucket field:
+Filter to `same_day_appointment = FALSE` to exclude walk-in rows. Create a calculated bucket field:
 ```
 CASE
   WHEN lead_time_days = 0 THEN 'Same day'
@@ -137,11 +140,13 @@ Implemented with dbt + dbt-duckdb. All transformations live in `dbt/models/`.
 
 ```
 dbt/models/
-  staging/   stg_clinic_appointments    ← types, casts, quality flags (view)
-  ref/       date_spine                 ← date reference table 2015–2030 (table)
-  marts/     appointments               ← OBT; primary BI surface (table)
-             patient_summary            ← patient-level aggregate; standalone (table)
-  analysis/  no_show_by_lead_time       ← no-show rate by lead-time bucket × SMS (table)
+  staging/       stg_clinic_appointments    ← type casts and renaming only (view)
+  intermediate/  int_clinic_appointments    ← quality fixes, flags, derived columns (view)
+  ref/           date_spine                 ← date reference table 2015–2030 (table)
+  marts/         appointments               ← OBT; primary BI surface (table)
+                 patient_summary            ← patient-level aggregate; standalone (table)
+                 clinic_summary             ← clinic-level aggregate; enables volume filtering (table)
+  analysis/      no_show_by_lead_time       ← no-show rate by lead-time bucket × SMS (table)
 ```
 
 Run: `cd dbt && dbt run --profiles-dir . --full-refresh`
