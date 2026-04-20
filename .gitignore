@@ -5,3 +5,4 @@ dbt/dbt_packages/
 dbt/logs/
 dbt/.user.yml
 .env
+.claude/

@@ -1,18 +1,13 @@
 -- Staging layer: one-to-one with the source table.
--- Responsible for type casting, column renaming, and data quality flags.
+-- Responsible for type casting and column renaming only.
 -- All downstream models reference this — raw source types are only handled here.
---
--- Data quality decisions applied here:
---   Age < 0   → keep raw value + age_invalid = true  (flagged)
---   Age = 0   → keep as-is, age_invalid = false  (ambiguous; could be infant)
---   PatientId is DOUBLE in source (CSV inference artifact); CAST to BIGINT is safe as all values fit within BIGINT range.
+-- Data quality flags and derived columns live in int_clinic_appointments.
 SELECT
     CAST(AppointmentID AS BIGINT)               AS appointment_id,
-    CAST(PatientId AS BIGINT)                   AS patient_id,
-    Clinic                                      AS clinic_name,
-    Gender                                      AS gender,
+    CAST(PatientId AS DOUBLE)                   AS patient_id,
+    CAST(Clinic AS VARCHAR)                     AS clinic_name,
+    CAST(Gender AS VARCHAR)                     AS gender,
     CAST(Age AS INTEGER)                        AS age,
-    (Age < 0)                                   AS age_invalid,
     CAST(LowIncome AS INTEGER)                  AS low_income,
     CAST(Hypertension AS INTEGER)               AS hypertension,
     CAST(Diabetes AS INTEGER)                   AS diabetes,

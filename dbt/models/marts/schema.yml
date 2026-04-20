@@ -18,10 +18,10 @@ models:
         description: "Whether an SMS reminder was sent for this appointment."
         data_type: boolean
       - name: lead_time_days
-        description: "Days between scheduling and appointment (appointment_at - scheduled_at). Can be negative — see lead_time_valid."
+        description: "Days between scheduling and appointment (appointment_at - scheduled_at). Negative for same-day walk-ins — see same_day_appointment."
         data_type: double
-      - name: lead_time_valid
-        description: "False if lead_time_days < 0 (timezone artifact). Filter to TRUE for lead-time analysis."
+      - name: same_day_appointment
+        description: "True if appointment and schedule share the same calendar date. Walk-in/drop-in population (38,563 rows). Exclude for lead-time analysis."
         data_type: boolean
       - name: scheduled_at
         description: "Timestamp when the appointment was scheduled."
@@ -57,11 +57,8 @@ models:
         description: "Patient identifier."
         data_type: bigint
       - name: age
-        description: "Patient age as recorded at scheduling time. See age_invalid."
+        description: "Patient age as recorded at scheduling time."
         data_type: integer
-      - name: age_invalid
-        description: "True if age < 0. Filter out for age-based analysis."
-        data_type: boolean
       - name: gender
         description: "Patient gender as recorded at scheduling time."
         data_type: varchar
@@ -81,6 +78,32 @@ models:
         description: "Disability severity 0–4 as recorded at scheduling time."
         data_type: integer
 
+  - name: clinic_summary
+    description: "Clinic-level aggregate. One row per clinic with appointment volume, no-show rate, utilization rate, and average scheduled lead time. Enables volume-based filtering at the BI layer."
+    columns:
+      - name: clinic_name
+        description: "Name of the clinic."
+        data_type: varchar
+        tests: [unique, not_null]
+      - name: total_appointments
+        description: "Total number of appointments at this clinic."
+        data_type: bigint
+      - name: total_patients
+        description: "Number of distinct patients seen at this clinic."
+        data_type: bigint
+      - name: no_show_count
+        description: "Number of appointments where the patient did not show."
+        data_type: bigint
+      - name: no_show_rate_pct
+        description: "No-show rate as a percentage (0–100), rounded to 1 decimal."
+        data_type: double
+      - name: utilization_rate_pct
+        description: "Attended-appointment rate as a percentage (0–100), rounded to 1 decimal."
+        data_type: double
+      - name: avg_scheduled_lead_time_days
+        description: "Average lead time in days for scheduled appointments. Excludes same-day walk-ins (same_day_appointment = true)."
+        data_type: double
+
   - name: patient_summary
     description: "Patient-level aggregate. One row per patient with latest known attributes and lifetime appointment statistics. Standalone — not joined to appointments."
     columns:
@@ -94,9 +117,6 @@ models:
       - name: age
         description: "Age from the patient's most recent appointment."
         data_type: integer
-      - name: age_invalid
-        description: "True if age < 0 on the most recent appointment row."
-        data_type: boolean
       - name: low_income
         description: "Low-income flag from the patient's most recent appointment."
         data_type: integer
